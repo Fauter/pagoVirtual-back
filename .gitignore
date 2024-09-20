@@ -1,0 +1,16 @@
+# Dependencias
+node_modules/
+
+# Archivos de configuración de entorno
+.env
+
+# Archivos de logs
+*.log
+
+# Archivos temporales y de caché
+*.tmp
+*.cache
+
+# Archivos de sistema
+.DS_Store
+.vscode/
