@@ -27,6 +27,10 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'La contraseña es requerida'],
         minlength: [6, 'La contraseña debe tener al menos 6 caracteres']
     },
+    ahorros: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Ahorro"
+    }],
     roles: {
         type: [String],
         default: ["userAhorrador"]

@@ -1,4 +1,5 @@
 const express = require("express");
+const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const authRoutes = require('./routes/authRoutes');
@@ -7,6 +8,7 @@ const adminRoutes = require('./routes/adminRoutes');
 dotenv.config();
 
 const app = express();
+app.use(cors());
 app.use(express.json()); // pars JSON
 
 // Conexión con la base de datos (MongoDB)
