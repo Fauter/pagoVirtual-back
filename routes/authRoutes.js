@@ -9,7 +9,8 @@ const {
     getUserById,
     updateUser,
     deleteUser
-} = require('../controllers/userControllers'); //
+} = require('../controllers/userControllers');
+const AhorroControllers = require('../controllers/ahorroControllers');
 
 const User = require("../models/User");
 
@@ -118,6 +119,51 @@ router.post("/login", [
     }
 });
 
+router.post("/admin/login", [
+    body('email').isEmail().withMessage('Debe ingresar un correo válido'),
+    body('password').exists().withMessage('La contraseña es requerida')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { email, password } = req.body;
+
+    try {
+        let user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ msg: "Ese email no se encuentra registrado" });
+        }
+
+        // Verificar contraseña
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ msg: "Contraseña Incorrecta" });
+        }
+        // Verificar si el usuario tiene rol de admin
+        if (!user.roles.includes("admin")) {
+            return res.status(403).json({ msg: "Acceso prohibido. Solo los administradores pueden iniciar sesión." });
+        }
+        // Generar token JWT con roles
+        const payload = {
+            user: {
+                id: user.id,
+                roles: user.roles
+            }
+        };
+        jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "1h" }, (err, token) => {
+            if (err) throw err;
+            res.json({ token });
+        });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Error en el servidor");
+    }
+});
+
+
 
 //Ruta Protegidas por Middleware
 
@@ -166,5 +212,20 @@ router.get("/users", authMiddleware, roleMiddleware("admin"), getAllUsers);
 router.get("/users/:id", authMiddleware, roleMiddleware("admin"), getUserById);
 router.put("/users/:id", authMiddleware, roleMiddleware("admin"), updateUser);
 router.delete("/users/:id", authMiddleware, roleMiddleware("admin"), deleteUser);
+
+//Rutas de Ahorro
+router.get('/', authMiddleware, AhorroControllers.obtenerAhorros);
+router.post('/crear',
+    [
+        body('monto').isNumeric().withMessage('El monto debe ser un número'),
+        body('direccion').not().isEmpty().withMessage('La dirección es requerida'),
+        body('fechaPago').isISO8601().withMessage('Fecha de pago inválida'),
+    ],
+    AhorroControllers.crearAhorro
+);
+
+router.get("/dashboard", authMiddleware, roleMiddleware("admin"), (req, res) => {
+    res.json({ msg: "Bienvenido al dashboard" });
+});
 
 module.exports = router;

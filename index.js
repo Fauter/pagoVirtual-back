@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const ahorroRoutes = require('./routes/ahorroRoutes');
+
 
 dotenv.config();
 
@@ -18,7 +20,10 @@ mongoose.connect(process.env.Mongo_URI, { useNewUrlParser: true, useUnifiedTopol
 
 // Rutas
 app.use("/api/auth", authRoutes);
+app.use("/api/auth/ahorros", ahorroRoutes);
 app.use("/api/admin", adminRoutes);
+
+
 
 // Ruta Raíz
 app.get("/", (req, res) => {
@@ -30,3 +35,18 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server corriendo en el puerto ${PORT}`)
 })
+
+
+app.delete('/api/reset', async (req, res) => {
+    try {
+        // Eliminar todos los documentos de Usuarios y Ahorros
+        await mongoose.connection.collection('users').deleteMany({});
+        await mongoose.connection.collection('ahorros').deleteMany({});
+        
+        console.log("Colecciones reseteadas correctamente");
+        res.send('Usuarios y Ahorros borrados correctamente');
+    } catch (error) {
+        console.log("Error al resetear las colecciones:", error);
+        res.status(500).send('Error al resetear la base de datos');
+    }
+});

@@ -3,7 +3,7 @@ const User = require('../models/User');
 //Obtener la lista de usuarios
 const getAllUsers = async (req, res) => {
     try {
-        const users = await User.find();
+        const users = await User.find().populate('ahorros');
         res.json(users);
     } catch (err) {
         console.error(err.message);

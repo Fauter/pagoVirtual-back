@@ -6,15 +6,14 @@ const ahorroSchema = new mongoose.Schema({
         ref: 'User',
         required: true
     },
-    categoria: { type: String, required: true },
+    direccion: { type: String, required: true },
     nombre: { type: String, required: true },
-    icono: { type: String, required: true }, // Podés usar una URL o SVG como string
-    montoAhorro: { type: Number, required: true }, // Integer
-    fechaInicio: { type: Date, required: true },
+    monto: { type: Number, required: true }, // Integer
     fechaPago: { type: Date, required: true },
-    ejecutarHasta: { type: Boolean, default: false }, // Si desea que se repita
+    repetir: { type: String, default: false }, // Si desea que se repita
     periodos: { type: Number, required: true }, // Cuotas
-    cvu: { type: String, required: true }, // CVU, CBU o alias
+    cvuOrigen: { type: String, required: true, minlength: 22, maxlength: 22 },
+    cvuDestino: { type: String, required: true, minlength: 22, maxlength: 22 },
 });
 
 module.exports = mongoose.model('Ahorro', ahorroSchema);

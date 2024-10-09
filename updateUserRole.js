@@ -23,7 +23,7 @@ const updateUserRole = async () => {
     try {
         // Actualiza el rol del usuario
         const user = await User.findByIdAndUpdate(
-            '66ec49572a11cf3bbc68d707', // Reemplaza con el ID del usuario
+            '67058ea9a7ecee8ede22a150', // Reemplaza con el ID del usuario
             { $addToSet: { roles: 'admin' } }, // Agrega el rol 'admin'
             { new: true }
         );
