@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const AhorroControllers = require('../controllers/ahorroControllers'); 
+const MovimientoControllers = require("../controllers/movimientoControllers")
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 const Ahorro = require('../models/Ahorro');
@@ -38,6 +39,12 @@ router.delete('/todos/:id', async (req, res) => {
         res.status(500).send('Error al eliminar el ahorro');
     }
 });
+
+router.post('/:id/movimiento', 
+    authMiddleware, 
+    roleMiddleware('userAhorrador'),
+    MovimientoControllers.crearMovimiento
+);
 
 
 module.exports = router;

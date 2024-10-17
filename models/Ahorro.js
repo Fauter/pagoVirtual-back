@@ -11,9 +11,12 @@ const ahorroSchema = new mongoose.Schema({
     monto: { type: Number, required: true }, // Integer
     fechaPago: { type: Date, required: true },
     repetir: { type: String, default: false }, // Si desea que se repita
-    periodos: { type: Number, required: true }, // Cuotas
+    periodos: { type: Number, required: true }, 
+    cuotas: { type: Number, required: false },
     cvuOrigen: { type: String, required: true, minlength: 22, maxlength: 22 },
     cvuDestino: { type: String, required: true, minlength: 22, maxlength: 22 },
+    historial: [{ fecha: Date, monto: Number }],
+    estado: { type: String, enum: ['activo', 'pausado'], default: 'activo' },
 });
 
 module.exports = mongoose.model('Ahorro', ahorroSchema);

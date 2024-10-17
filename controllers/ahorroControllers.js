@@ -1,7 +1,9 @@
 const mongoose = require('mongoose');
 const Ahorro = require('../models/Ahorro'); 
 const User = require('../models/User');
+const Movimiento = require('../models/Movimiento');
 const { validationResult } = require('express-validator');
+const moment = require('moment');
 
 exports.obtenerTodosLosAhorros = async (req, res) => {
     try {
@@ -15,10 +17,8 @@ exports.obtenerTodosLosAhorros = async (req, res) => {
 
 exports.obtenerAhorros = async (req, res) => {
     const userId = req.user._id;
-    console.log('User ID:', userId);
     try {
         const ahorros = await Ahorro.find({ userId: userId }).sort({ nombre: 1 });
-        console.log('Ahorros encontrados:', ahorros);
         res.json(ahorros);
     } catch (error) {
         console.error(error.message);
@@ -35,11 +35,22 @@ exports.crearAhorro = async (req, res) => {
     const { direccion, nombre, monto, fechaPago, repetir, periodos, cvuOrigen, cvuDestino } = req.body;
     const userId = req.user.id;
     console.log('User ID:', userId);
+
     if (!mongoose.Types.ObjectId.isValid(userId)) {
         return res.status(400).json({ message: 'ID de usuario no válido' });
     }
 
     try {
+        // Calcular la cantidad de días entre hoy y la fecha de pago
+        const hoy = moment();
+        const diferenciaDias = moment(fechaPago).diff(hoy, 'days');
+        // Calcular la cantidad de cuotas
+        const cuotas = Math.floor(diferenciaDias / periodos);
+
+        if (cuotas <= 0) {
+            return res.status(400).json({ message: 'La cantidad de cuotas debe ser mayor a 0' });
+        }
+
         const nuevoAhorro = new Ahorro({
             userId: userId,
             direccion,
@@ -48,16 +59,43 @@ exports.crearAhorro = async (req, res) => {
             fechaPago,
             repetir,
             periodos,
+            cuotas: cuotas,
             cvuOrigen,
-            cvuDestino
+            cvuDestino,
+            historial: []
         });
 
         const ahorroGuardado = await nuevoAhorro.save();
-        const usuario = await User.findById(userId);
-        usuario.ahorros.push(ahorroGuardado._id);
-        await usuario.save(); 
+        const montoPorCuota = Math.round((monto / cuotas) * 100) / 100;
+        
+        const nuevoMovimiento = new Movimiento({
+            ahorroId: ahorroGuardado._id,
+            fecha: hoy.toDate(),
+            monto: montoPorCuota
+        })
+        const primerMovimiento = await nuevoMovimiento.save();
 
-        res.status(201).json(ahorroGuardado);
+        ahorroGuardado.historial.push({
+            fecha: primerMovimiento.fecha,
+            monto: primerMovimiento.monto
+        });
+        await ahorroGuardado.save();
+
+        const usuario = await User.findById(userId);
+        if (!usuario) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        if (!Array.isArray(usuario.ahorros)) {
+            usuario.ahorros = [];
+        }
+        usuario.ahorros.push(ahorroGuardado._id);
+        await usuario.save();
+        
+        res.status(201).json({
+            message: 'Ahorro creado con éxito y primer movimiento registrado',
+            ahorro: ahorroGuardado,
+            primerMovimiento
+        });
     } catch (error) {
         console.error(error.message);
         res.status(500).json({ error: "Error en el servidor" });
