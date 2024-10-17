@@ -59,54 +59,97 @@ app.use((err, req, res, next) => {
 });
 
 // CRON
+let ultimaFechaSimuladaCron = moment().startOf('day');
+
 cron.schedule('0 0 * * *', async () => { // Ejecuta todos los días a la medianoche
     console.log("Cron job ejecutado");
     try {
         const ahorros = await Ahorro.find({ estado: 'activo' });
+        ultimaFechaSimuladaCron = moment().startOf('day');
+
+        console.log(`Simulando hasta: ${ultimaFechaSimuladaCron.format('YYYY-MM-DD')}`);
 
         for (const ahorro of ahorros) {
-            const hoy = moment().startOf('day');
-            const fechaUltimoPago = moment(ahorro.historial[ahorro.historial.length - 1]?.fecha || ahorro.fechaPago).startOf('day');
-            const diasDesdeUltimoPago = hoy.diff(fechaUltimoPago, 'days');
+            let fechaUltimoPago = moment(ahorro.historial[ahorro.historial.length - 1]?.fecha || ahorro.fechaPago).startOf('day');
+            let diasDesdeUltimoPago = ultimaFechaSimuladaCron.diff(fechaUltimoPago, 'days');
+            console.log(`Días desde el último pago para ${ahorro.nombre}: ${diasDesdeUltimoPago}`);
 
             if (diasDesdeUltimoPago >= ahorro.periodos) {
-                const cuotasRestantes = ahorro.periodos - ahorro.historial.length;
-
+                const cuotasRestantes = ahorro.cuotas - ahorro.historial.length;
+                const montoPorCuota = Math.round((ahorro.monto / ahorro.cuotas) * 100) / 100;
+                
                 if (cuotasRestantes > 0) {
-                    const montoPorCuota = ahorro.monto / ahorro.periodos;
                     const nuevoMovimiento = new Movimiento({
                         ahorroId: ahorro._id,
-                        fecha: hoy.toDate(),
+                        fecha: ultimaFechaSimuladaCron.toDate(),
                         monto: montoPorCuota,
                     });
                     await nuevoMovimiento.save();
-
-                    ahorro.historial.unshift({
+                    ahorro.historial.push({
                         fecha: nuevoMovimiento.fecha,
                         monto: nuevoMovimiento.monto,
-                    }); 
+                    });
+                    
                     await ahorro.save();
                     console.log(`Movimiento de ${montoPorCuota} creado para el ahorro ${ahorro.nombre}`);
                 }
-                else {
-                    if (ahorro.repetir === "Único") {
-                        ahorro.estado = "pausado";
+
+                if (ultimaFechaSimuladaCron.isSame(ahorro.fechaPago, 'day')) {
+                    const cuotasRestantes = ahorro.cuotas - ahorro.historial.length;
+                    if (cuotasRestantes === 0) {
+                        const movimientoTransferencia = new Movimiento({
+                            ahorroId: ahorro._id,
+                            fecha: ultimaFechaSimuladaCron.toDate(),
+                            monto: 0,
+                            descripcion: 'Ahorro transferido'
+                        });
+                        await movimientoTransferencia.save();
+
+                        ahorro.historial.push({
+                            fecha: movimientoTransferencia.fecha,
+                            monto: movimientoTransferencia.monto,
+                        });
+
+                        if (ahorro.repetir === "Único") {
+                            ahorro.estado = 'pausado';
+                            console.log(`Ahorro ${ahorro.nombre} ${ahorro.estado} y movimiento de transferencia creado.`);
+                        } else if (ahorro.repetir === "Recursivo") {
+                            let nuevaFechaPago = moment(ahorro.fechaPago).add(1, 'month');
+                            const ultimoDiaDelMes = nuevaFechaPago.endOf('month').date();
+                            if (nuevaFechaPago.date() > ultimoDiaDelMes) {
+                                nuevaFechaPago.date(ultimoDiaDelMes);
+                            }
+                            ahorro.fechaPago = nuevaFechaPago.startOf('day').toDate();
+                            console.log(`Ahorro ${ahorro.nombre} repetitivo, fecha de pago ajustada a: ${nuevaFechaPago.format('YYYY-MM-DD')}`);
+
+                            // Generar un nuevo movimiento después de la transferencia
+                            const nuevoMovimiento = new Movimiento({
+                                ahorroId: ahorro._id,
+                                fecha: ultimaFechaSimuladaCron.toDate(),
+                                monto: montoPorCuota,
+                            });
+                            await nuevoMovimiento.save();
+                            ahorro.historial.push({
+                                fecha: nuevoMovimiento.fecha,
+                                monto: nuevoMovimiento.monto,
+                            });
+                            await ahorro.save();
+                            console.log(`Movimiento de ${montoPorCuota} creado para el ahorro ${ahorro.nombre}`);
+                        }
                         await ahorro.save();
-                        console.log(`Ahorro ${ahorro.nombre} pausado porque alcanzó su límite de cuotas.`);
-                    } else if (ahorro.repetir === "Recursivo") {
-                        console.log(`Ahorro ${ahorro.nombre} es recursivo y continuará generando movimientos.`);
+                    } else {
+                        console.log(`No se puede transferir, cuotas restantes para ${ahorro.nombre}: ${cuotasRestantes}`);
                     }
                 }
-            }
-            else {
-                console.log(`Ahorro ${ahorro.nombre} finalizado y no se repite.`);
+            } else {
+                console.log(`Ahorro ${ahorro.nombre} no necesita nuevos movimientos.`);
             }
         }
+        console.log(`Simulación de día ejecutada: ${ultimaFechaSimuladaCron.format('YYYY-MM-DD')}`);
     } catch (error) {
         console.error("Error al ejecutar el cron job:", error);
     }
 });
-//
 
 let ultimaFechaSimulada = moment().startOf('day');
 app.post('/api/simular-dia', async (req, res) => {
