@@ -8,9 +8,9 @@ const ahorroSchema = new mongoose.Schema({
     },
     direccion: { type: String, required: true },
     nombre: { type: String, required: true },
-    monto: { type: Number, required: true }, // Integer
+    monto: { type: Number, required: true },
     fechaPago: { type: Date, required: true },
-    repetir: { type: String, default: false }, // Si desea que se repita
+    repetir: { type: String, default: false }, 
     periodos: { type: Number, required: true }, 
     cuotas: { type: Number, required: false },
     cvuOrigen: { type: String, required: true, minlength: 22, maxlength: 22 },

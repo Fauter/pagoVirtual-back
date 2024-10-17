@@ -41,7 +41,6 @@ app.listen(PORT, () => {
 // RESET DATABASE
 app.delete('/api/reset', async (req, res) => {
     try {
-        // Eliminar todos los documentos de Usuarios y Ahorros
         await mongoose.connection.collection('users').deleteMany({});
         await mongoose.connection.collection('ahorros').deleteMany({});
         
@@ -59,6 +58,7 @@ app.use((err, req, res, next) => {
     res.status(500).send('Algo salió mal!');
 });
 
+// CRON
 cron.schedule('0 0 * * *', async () => { // Ejecuta todos los días a la medianoche
     console.log("Cron job ejecutado");
     try {
@@ -106,6 +106,7 @@ cron.schedule('0 0 * * *', async () => { // Ejecuta todos los días a la mediano
         console.error("Error al ejecutar el cron job:", error);
     }
 });
+//
 
 let ultimaFechaSimulada = moment().startOf('day');
 app.post('/api/simular-dia', async (req, res) => {
@@ -121,7 +122,6 @@ app.post('/api/simular-dia', async (req, res) => {
             let diasDesdeUltimoPago = ultimaFechaSimulada.diff(fechaUltimoPago, 'days');
             console.log(`Días desde el último pago para ${ahorro.nombre}: ${diasDesdeUltimoPago}`);
 
-            // Verifica si deben generarse nuevos movimientos
             if (diasDesdeUltimoPago >= ahorro.periodos) {
                 const cuotasRestantes = ahorro.cuotas - ahorro.historial.length;
                 const montoPorCuota = Math.round((ahorro.monto / ahorro.cuotas) * 100) / 100;
@@ -142,7 +142,6 @@ app.post('/api/simular-dia', async (req, res) => {
                     console.log(`Movimiento de ${montoPorCuota} creado para el ahorro ${ahorro.nombre}`);
                 } 
                 
-                // Verifica si la fecha simulada coincide con la fecha de pago
                 if (ultimaFechaSimulada.isSame(ahorro.fechaPago, 'day')) {
                     const cuotasRestantes = ahorro.cuotas - ahorro.historial.length;
                     if (cuotasRestantes === 0) {
@@ -188,9 +187,6 @@ app.post('/api/simular-dia', async (req, res) => {
                             console.log(`Movimiento de ${montoPorCuota} creado para el ahorro ${ahorro.nombre}`);
                         }
                         await ahorro.save();
-                        // ahorro.estado = 'pausado';
-                        // await ahorro.save();
-                        // console.log(`Ahorro ${ahorro.nombre} pausado y movimiento de transferencia creado.`);
                     } else {
                         console.log(`No se puede transferir, cuotas restantes para ${ahorro.nombre}: ${cuotasRestantes}`);
                     }

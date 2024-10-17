@@ -3,7 +3,7 @@ const Ahorro = require('../models/Ahorro');
 
 //Actualizar Roles
 const updateUserRole = async (req, res) => {
-    const { userId, roles } = req.body; // El admin manda el userId y los roles deseados en el body
+    const { userId, roles } = req.body; 
     try {
         await User.findByIdAndUpdate(userId, { roles: roles });
         res.status(200).json({ msg: "Roles actualizados exitosamente" });
@@ -15,8 +15,8 @@ const updateUserRole = async (req, res) => {
 const eliminarTodo = async (req, res) => {
     console.log('Eliminando todos los usuarios y ahorros...');
     try {
-        await User.deleteMany(); // Elimina todos los usuarios
-        await Ahorro.deleteMany(); // Elimina todos los ahorros
+        await User.deleteMany();
+        await Ahorro.deleteMany();
         res.status(200).json({ msg: 'Base de datos reiniciada con éxito' });
     } catch (error) {
         console.error(error.message);

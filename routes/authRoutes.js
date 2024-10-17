@@ -170,7 +170,6 @@ router.post("/admin/login", [
 //Ruta de Auth para Token
 router.get("/profile", authMiddleware, async (req, res) => {
     try{
-        //Accede a la info del user
         const user = await User.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ msg: "UserID no encontrado" });
